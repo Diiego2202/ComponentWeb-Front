@@ -17,7 +17,7 @@ const formatDate = (dateString: string) => {
   return `${day}/${month}/${year}`;
 };
 
-const Pedido: React.FC = () => {
+const Pedidos: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [pedido, setPedido] = useState<Pedido | null>(null);
   const [loading, setLoading] = useState(true);
@@ -67,4 +67,4 @@ const Pedido: React.FC = () => {
   );
 };
 
-export default Pedido;
+export default Pedidos;

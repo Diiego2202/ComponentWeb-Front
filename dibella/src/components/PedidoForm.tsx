@@ -1,7 +1,15 @@
 import React, { useState, useEffect, ChangeEvent } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/axiosConfig";
-import { Button, TextField, LinearProgress, MenuItem } from "@mui/material";
+import {
+  Button,
+  TextField,
+  LinearProgress,
+  MenuItem,
+  IconButton,
+  Snackbar,
+} from "@mui/material";
+import MuiAlert, { AlertProps } from "@mui/material/Alert";
 
 interface Produto {
   id: number;
@@ -18,12 +26,12 @@ interface Pedido {
   produtos: Produto[];
 }
 
-const formatCurrency = (value: number) => {
-  return value.toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
-};
+const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(
+  props,
+  ref
+) {
+  return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
+});
 
 const PedidoForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -31,6 +39,7 @@ const PedidoForm: React.FC = () => {
   const [pedido, setPedido] = useState<Pedido>({ valor: 0, produtos: [] });
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [progress, setProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -44,7 +53,6 @@ const PedidoForm: React.FC = () => {
             ...p.produto,
           }));
           setPedido(pedidoData);
-          calculateTotalValue(pedidoData.produtos);
           updateProgress(pedidoData);
         })
         .catch((error) => console.error("Error fetching pedido:", error));
@@ -67,11 +75,11 @@ const PedidoForm: React.FC = () => {
         [name]: name === "quantidade" ? Number(value) : value,
       };
       setPedido({ ...pedido, produtos: newProdutos });
-      calculateTotalValue(newProdutos);
+      updateProgress({ ...pedido, produtos: newProdutos });
     } else {
       setPedido({ ...pedido, [name]: Number(value) });
+      updateProgress({ ...pedido, [name]: Number(value) });
     }
-    updateProgress(pedido);
   };
 
   const addProduct = () => {
@@ -82,6 +90,20 @@ const PedidoForm: React.FC = () => {
         { id: 0, nome: "", tamanho: "", valor: 0, estoque: 0, quantidade: 0 },
       ],
     });
+    updateProgress({
+      ...pedido,
+      produtos: [
+        ...pedido.produtos,
+        { id: 0, nome: "", tamanho: "", valor: 0, estoque: 0, quantidade: 0 },
+      ],
+    });
+  };
+
+  const removeProduct = (index: number) => {
+    const newProdutos = [...pedido.produtos];
+    newProdutos.splice(index, 1);
+    setPedido({ ...pedido, produtos: newProdutos });
+    updateProgress({ ...pedido, produtos: newProdutos });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -93,6 +115,15 @@ const PedidoForm: React.FC = () => {
         quantidade: p.quantidade,
       })),
     };
+
+    if (
+      pedidoData.produtos.length === 0 ||
+      pedidoData.produtos.some((p) => p.produtoId === 0 || p.quantidade === 0)
+    ) {
+      setError("Selecione um produto ou defina uma quantidade.");
+      return;
+    }
+
     const request = id
       ? api.put(`/pedido/${id}`, pedidoData)
       : api.post("/pedido", pedidoData);
@@ -101,21 +132,15 @@ const PedidoForm: React.FC = () => {
       .catch((error) => console.error("Error saving pedido:", error));
   };
 
-  const calculateTotalValue = (produtos: Produto[]) => {
-    const total = produtos.reduce((acc, produto) => {
-      return acc + (produto ? produto.valor * (produto.quantidade || 0) : 0);
-    }, 0);
-    setPedido((prevPedido) => ({ ...prevPedido, valor: total }));
-  };
-
   const updateProgress = (pedido: Pedido) => {
-    const totalFields = 1 + pedido.produtos.length * 2;
+    const totalFields = pedido.produtos.length * 2;
     let filledFields = 0;
-    if (pedido.valor > 0) filledFields += 1;
+
     pedido.produtos.forEach((produto) => {
       if (produto.id > 0) filledFields += 1;
       if (produto.quantidade && produto.quantidade > 0) filledFields += 1;
     });
+
     setProgress((filledFields / totalFields) * 100);
   };
 
@@ -128,7 +153,7 @@ const PedidoForm: React.FC = () => {
       <h1 className="text-2xl font-semibold">
         {id ? "Editar Pedido" : "Criar Pedido"}
       </h1>
-      <div className="flex itens-center gap-4">
+      <div className="flex items-center gap-4">
         <Button
           type="button"
           variant="contained"
@@ -137,14 +162,11 @@ const PedidoForm: React.FC = () => {
         >
           Home
         </Button>
-        <div className="p-2 border w-fit">
-          <p>Valor do Pedido: {formatCurrency(pedido.valor)}</p>
-        </div>
       </div>
       <LinearProgress variant="determinate" value={progress} />
       <form onSubmit={handleSubmit} className="space-y-4">
         {pedido.produtos.map((produto, index) => (
-          <div key={index} className="space-x-4">
+          <div key={index} className="flex items-center space-x-4">
             <TextField
               select
               label="Produto"
@@ -168,6 +190,13 @@ const PedidoForm: React.FC = () => {
               onChange={(e) => handleInputChange(e, index)}
               required
             />
+            <IconButton
+              edge="end"
+              color="error"
+              onClick={() => removeProduct(index)}
+            >
+              X
+            </IconButton>
           </div>
         ))}
         <div className="space-x-4">
@@ -184,6 +213,17 @@ const PedidoForm: React.FC = () => {
           </Button>
         </div>
       </form>
+      {error && (
+        <Snackbar
+          open={!!error}
+          autoHideDuration={6000}
+          onClose={() => setError(null)}
+        >
+          <Alert onClose={() => setError(null)} severity="error">
+            {error}
+          </Alert>
+        </Snackbar>
+      )}
     </div>
   );
 };
