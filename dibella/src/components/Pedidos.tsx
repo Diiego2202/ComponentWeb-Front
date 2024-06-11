@@ -54,7 +54,7 @@ const Pedidos: React.FC = () => {
       <h1 className="mb-4 text-2xl font-semibold">
         Detalhes do Pedido {pedido.id}
       </h1>
-      <p>Valor: {pedido.valor}</p>
+      <p>Valor: {pedido.valor.toFixed(2)}</p>
       <p>Data: {formatDate(pedido.data)}</p>
       <Button
         variant="contained"
