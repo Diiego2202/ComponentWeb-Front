@@ -1,18 +1,19 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import OrdersList from './components/OrdersList';
-import OrderForm from './components/OrderForm';
+import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import ListaPedidos from "./components/ListaPedidos";
+import PedidoForm from "./components/PedidoForm";
+import Pedido from "./components/Pedido";
 
 const App: React.FC = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<OrdersList />} />
-        <Route path="/order/new" element={<OrderForm />} />
-        <Route path="/order/:id" element={<OrderForm />} />
+        <Route path="/" element={<ListaPedidos />} />
+        <Route path="/pedido/new" element={<PedidoForm />} />
+        <Route path="/pedido/:id" element={<Pedido />} />
       </Routes>
     </Router>
   );
-}
+};
 
 export default App;
